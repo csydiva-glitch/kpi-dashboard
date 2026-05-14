@@ -1,0 +1,19 @@
+# 민감 파일
+serviceAccountKey.json
+.streamlit/secrets.toml
+
+# 데이터 파일
+*.xls
+*.xlsx
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
