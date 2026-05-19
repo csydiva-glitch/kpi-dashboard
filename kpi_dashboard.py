@@ -394,14 +394,17 @@ month  = None if m_sel == '미선택' else int(m_sel[:-1])
 # Navigation
 st.sidebar.markdown(f'<div style="margin:.9rem 0 .3rem;font-size:.6rem;color:{SB_MUTED_FG};font-weight:600;letter-spacing:.08em;text-transform:uppercase">Navigation</div>', unsafe_allow_html=True)
 _cur_page = st.session_state.get('page', 'home')
-for _icon, _label, _key in [
-    ('📊', '전사 요약',    'home'),
-    ('🏢', '부문·KI 상세', 'ki_detail'),
-]:
-    if st.sidebar.button(f'{_icon}  {_label}', key=f'nav_{_key}',
-                         use_container_width=True,
-                         type='primary' if _cur_page == _key else 'secondary'):
-        st.session_state.page = _key
+if st.sidebar.button('📊  전사 요약', key='nav_home', use_container_width=True,
+                     type='primary' if _cur_page == 'home' else 'secondary'):
+    st.session_state.page = 'home'
+    st.rerun()
+
+st.sidebar.markdown(f'<div style="margin:.6rem 0 .2rem;font-size:.6rem;color:{SB_MUTED_FG};font-weight:600;letter-spacing:.08em;text-transform:uppercase">부문별</div>', unsafe_allow_html=True)
+for _ndiv in DIV_ORDER:
+    _nkey = f'div_{_ndiv}'
+    if st.sidebar.button(f'🏭  {_ndiv}', key=f'nav_{_nkey}', use_container_width=True,
+                         type='primary' if _cur_page == _nkey else 'secondary'):
+        st.session_state.page = _nkey
         st.rerun()
 
 st.sidebar.markdown(f'<hr style="border:none;border-top:1px solid {SB_BORDER};margin:.6rem 0"><div style="font-size:.6rem;color:{SB_MUTED_FG};font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem">Filters</div>', unsafe_allow_html=True)
@@ -581,98 +584,158 @@ st.sidebar.markdown(f"""
 </div>""", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════
-# PAGE: 부문·KI 상세
+# PAGE: 부문별 상세
 # ══════════════════════════════════════════════════════
-if st.session_state.get('page', 'home') == 'ki_detail':
-    st.markdown('<div class="sec-hd">부문·KI 상세</div>', unsafe_allow_html=True)
+_page = st.session_state.get('page', 'home')
+if _page.startswith('div_'):
+    _pd = _page[4:]   # 부문명 추출 (e.g. '인쇄')
 
-    avail_divs = [d for d in DIV_ORDER if '부문' in fdf.columns and d in fdf['부문'].values]
-    if not avail_divs:
-        st.info('필터 조건에 맞는 데이터가 없습니다.')
-        st.stop()
+    # 해당 부문 데이터 — 부문 필터 제외하고 나머지 필터 적용
+    _base = mdf[mdf['부문'] == _pd].copy() if '부문' in mdf.columns else mdf.copy()
+    _pmask = pd.Series(True, index=_base.index)
+    if '분류' in _base.columns and sel_cat  != '전체': _pmask &= _base['분류'] == sel_cat
+    if '구분' in _base.columns and sel_type != '전체': _pmask &= _base['구분'] == sel_type
+    if key_only and '차별화' in _base.columns:
+        _pmask &= _base['차별화'].astype(str).str.strip().str.upper() == 'Y'
+    _pdfa = _base[_pmask]
+    _pdf  = _pdfa[_pdfa['_tl'] != 'gray']
 
-    ki_col = 'KI' if 'KI' in fdf.columns else None
+    _pt   = len(_pdf)
+    _pa   = _pdf['_ach'].dropna().mean() if _pt else None
+    _ptl  = get_tl(_pa)
+    _pc   = {k: int((_pdf['_tl']==k).sum()) for k in TL_INFO}
+    _pk   = int((_pdf['차별화'].astype(str).str.upper()=='Y').sum()) if '차별화' in _pdf.columns else 0
+    _pwarn = int(_pdf['_warn'].sum())
+    _pclr = TL_INFO[_ptl]['fg']
 
-    tabs = st.tabs(avail_divs)
-    for tab, div in zip(tabs, avail_divs):
-        with tab:
-            div_df = fdf[fdf['부문'] == div].copy()
-            ki_list = ([k for k in div_df[ki_col].dropna().unique() if str(k).strip() and str(k) != 'nan']
-                       if ki_col else [])
-
-            if not ki_list:
-                st.caption('KI 데이터가 없습니다.')
-            else:
-                N = 4
-                for i in range(0, len(ki_list), N):
-                    chunk = ki_list[i:i+N]
-                    cols  = st.columns(len(chunk))
-                    for col, ki in zip(cols, chunk):
-                        ki_rows = div_df[div_df[ki_col] == ki]
-                        kt  = len(ki_rows)
-                        ka  = ki_rows['_ach'].dropna().mean() if kt else None
-                        ktl = get_tl(ka)
-                        kcc = {k: int((ki_rows['_tl']==k).sum()) for k in TL_INFO}
-                        kk  = int((ki_rows['차별화'].astype(str).str.upper()=='Y').sum()) \
-                              if '차별화' in ki_rows.columns else 0
-                        with col:
-                            st.markdown(f"""
-<div class="dc">
-  <div class="dnm" style="font-size:.7rem;line-height:1.3;margin-bottom:4px">{ki}</div>
-  <div class="davg" style="color:{TL_INFO[ktl]['fg']}">{f'{ka:.0f}%' if ka is not None else 'N/A'}</div>
-  <div class="dcnt">KPI {kt}건 · ⭐{kk}</div>
-  {stk_html(kcc, kt)}
-  <div style="font-size:.6rem;color:{MUTED_FG};display:flex;gap:5px;margin-top:2px">
-    <span>🟢{kcc['green']}</span><span>🟡{kcc['yellow']}</span>
-    <span>🔴{kcc['red']}</span>
+    # ── 부문 헤더 ─────────────────────────────────────
+    st.markdown(f"""
+<div style="background:{HEADER_DARK};border-radius:{RADIUS};padding:1.25rem 1.75rem;
+            margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;
+            flex-wrap:wrap;gap:1rem">
+  <div>
+    <div style="font-size:.63rem;color:rgba(255,255,255,.45);font-weight:700;
+                letter-spacing:.1em;text-transform:uppercase;margin-bottom:.35rem">{month}월 · 부문 실적</div>
+    <div style="font-size:1.75rem;font-weight:700;color:#ffffff;
+                font-family:'Hanken Grotesk',sans-serif;line-height:1">{_pd} 부문</div>
+    <div style="font-size:.72rem;color:rgba(255,255,255,.5);margin-top:.4rem">
+      KPI {_pt}건 &nbsp;·&nbsp; ⭐ 핵심 {_pk}건 &nbsp;·&nbsp; ⚠ 급락 {_pwarn}건
+    </div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-size:2.6rem;font-weight:700;color:{_pclr};
+                font-family:'JetBrains Mono',monospace;line-height:1">{fmt_ach(_pa)}</div>
+    <div style="font-size:.72rem;color:rgba(255,255,255,.5);margin-top:.35rem">
+      🟢 {_pc['green']}건 &nbsp; 🟡 {_pc['yellow']}건 &nbsp; 🔴 {_pc['red']}건
+    </div>
   </div>
 </div>""", unsafe_allow_html=True)
 
-                st.markdown('<div style="height:.6rem"></div>', unsafe_allow_html=True)
+    # ── KI 현황 카드 ──────────────────────────────────
+    _ki_col = 'KI' if 'KI' in _pdf.columns else None
+    _ki_list = []
+    if _ki_col:
+        _ki_list = [k for k in _pdf[_ki_col].dropna().unique()
+                    if str(k).strip() and str(k) != 'nan']
 
-                for ki in ki_list:
-                    ki_rows = div_df[div_df[ki_col] == ki].copy()
-                    kt  = len(ki_rows)
-                    ka  = ki_rows['_ach'].dropna().mean() if kt else None
-                    ktl = get_tl(ka)
-                    ach_str = f'{ka:.1f}%' if ka is not None else 'N/A'
-                    exp_label = f"{TL_INFO[ktl]['dot']}  {ki}  ({ach_str} / {kt}건)"
-                    with st.expander(exp_label, expanded=False):
-                        tbl_data = []
-                        for _, r in ki_rows.sort_values('_ach', ascending=True, na_position='last').iterrows():
-                            ach   = r['_ach']
-                            tl    = r['_tl']
-                            delta = r['_delta']
-                            is_key = str(r.get('차별화','')).strip().upper() == 'Y'
-                            d_str = ''
-                            if delta is not None:
-                                d_str = f"{'▲' if delta>0 else '▼'}{abs(delta):.1f}%p"
-                            tbl_data.append({
-                                '⭐':      '⭐' if is_key else '',
-                                '분류':    str(r.get('분류','')),
-                                '구분':    str(r.get('구분','')),
-                                '지표명':  str(r.get('지표명','')),
-                                '단위':    str(r.get('단위','')),
-                                '누계계획': r.get('당월 누계 계획'),
-                                '누계실적': r.get('당월 누계 실적'),
-                                '달성률':  ach,
-                                '신호등':  TL_INFO[tl]['dot']+' '+TL_INFO[tl]['label'],
-                                '전월대비': d_str,
-                                '⚠':       '⚠ 급락' if r['_warn'] else '',
-                            })
-                        if tbl_data:
-                            ki_tdf = pd.DataFrame(tbl_data)
-                            ki_cfg = {
-                                '⭐':       st.column_config.TextColumn('⭐', disabled=True, width='small'),
-                                '누계계획': st.column_config.NumberColumn('누계계획', format='%.2f'),
-                                '누계실적': st.column_config.NumberColumn('누계실적', format='%.2f'),
-                                '달성률':   st.column_config.NumberColumn('달성률(%)', format='%.1f'),
-                            }
-                            for c in ki_tdf.columns:
-                                if c not in ki_cfg:
-                                    ki_cfg[c] = st.column_config.TextColumn(c, disabled=True)
-                            st.dataframe(ki_tdf, column_config=ki_cfg,
-                                         hide_index=True, use_container_width=True)
+    if _ki_list:
+        st.markdown('<div class="sec-hd">KI 현황</div>', unsafe_allow_html=True)
+        _N = 4
+        for _i in range(0, len(_ki_list), _N):
+            _chunk = _ki_list[_i:_i+_N]
+            _kcols = st.columns(len(_chunk))
+            for _kcol, _ki in zip(_kcols, _chunk):
+                _krows = _pdf[_pdf[_ki_col] == _ki]
+                _kt  = len(_krows)
+                _ka  = _krows['_ach'].dropna().mean() if _kt else None
+                _ktl = get_tl(_ka)
+                _kcc = {k: int((_krows['_tl']==k).sum()) for k in TL_INFO}
+                _kk  = int((_krows['차별화'].astype(str).str.upper()=='Y').sum()) \
+                       if '차별화' in _krows.columns else 0
+                with _kcol:
+                    st.markdown(f"""
+<div class="dc">
+  <div class="dnm" style="font-size:.7rem;line-height:1.3;margin-bottom:4px">{_ki}</div>
+  <div class="davg" style="color:{TL_INFO[_ktl]['fg']}">{f'{_ka:.0f}%' if _ka is not None else 'N/A'}</div>
+  <div class="dcnt">KPI {_kt}건 · ⭐{_kk}</div>
+  {stk_html(_kcc, _kt)}
+  <div style="font-size:.6rem;color:{MUTED_FG};display:flex;gap:5px;margin-top:2px">
+    <span>🟢{_kcc['green']}</span><span>🟡{_kcc['yellow']}</span><span>🔴{_kcc['red']}</span>
+  </div>
+</div>""", unsafe_allow_html=True)
+
+        # ── KI 상세 expanders ──────────────────────────
+        st.markdown('<div class="sec-hd" style="margin-top:1.25rem">KI 상세</div>', unsafe_allow_html=True)
+        for _ki in _ki_list:
+            _krows = _pdf[_pdf[_ki_col] == _ki].copy()
+            _kt  = len(_krows)
+            _ka  = _krows['_ach'].dropna().mean() if _kt else None
+            _ktl = get_tl(_ka)
+            _ach_s = f'{_ka:.1f}%' if _ka is not None else 'N/A'
+            with st.expander(f"{TL_INFO[_ktl]['dot']}  {_ki}  ({_ach_s} / {_kt}건)", expanded=False):
+                _tbl = []
+                for _, _r in _krows.sort_values('_ach', ascending=True, na_position='last').iterrows():
+                    _ach_v = _r['_ach']; _tl_v = _r['_tl']; _d_v = _r['_delta']
+                    _is_key = str(_r.get('차별화','')).strip().upper() == 'Y'
+                    _ds = (f"{'▲' if _d_v>0 else '▼'}{abs(_d_v):.1f}%p") if _d_v is not None else ''
+                    _tbl.append({
+                        '⭐': '⭐' if _is_key else '',
+                        '분류': str(_r.get('분류','')),
+                        '구분': str(_r.get('구분','')),
+                        '지표명': str(_r.get('지표명','')),
+                        '단위': str(_r.get('단위','')),
+                        '누계계획': _r.get('당월 누계 계획'),
+                        '누계실적': _r.get('당월 누계 실적'),
+                        '달성률': _ach_v,
+                        '신호등': TL_INFO[_tl_v]['dot']+' '+TL_INFO[_tl_v]['label'],
+                        '전월대비': _ds,
+                        '⚠': '⚠ 급락' if _r['_warn'] else '',
+                    })
+                if _tbl:
+                    _tdf = pd.DataFrame(_tbl)
+                    _cfg = {
+                        '⭐':       st.column_config.TextColumn('⭐', disabled=True, width='small'),
+                        '누계계획': st.column_config.NumberColumn('누계계획', format='%.2f'),
+                        '누계실적': st.column_config.NumberColumn('누계실적', format='%.2f'),
+                        '달성률':   st.column_config.NumberColumn('달성률(%)', format='%.1f'),
+                    }
+                    for _c in _tdf.columns:
+                        if _c not in _cfg: _cfg[_c] = st.column_config.TextColumn(_c, disabled=True)
+                    st.dataframe(_tdf, column_config=_cfg, hide_index=True, use_container_width=True)
+
+    else:
+        st.info(f'{_pd} 부문에 해당하는 KI 데이터가 없습니다.')
+
+    # ── 재무목표 (해당 부문) ──────────────────────────
+    _fin_base = mdf[mdf['부문'] == _pd].copy() if '부문' in mdf.columns else pd.DataFrame()
+    _fin_df = _fin_base[_fin_base['구분'] == '재무목표'].copy() if '구분' in _fin_base.columns else pd.DataFrame()
+    if not _fin_df.empty:
+        st.markdown('<div class="sec-hd" style="margin-top:1.25rem">재무목표</div>', unsafe_allow_html=True)
+        _fa = _fin_df['_ach'].dropna().mean() if len(_fin_df) else None
+        _ftl = get_tl(_fa)
+        kpi_opts = _fin_df['지표명'].unique().tolist() if '지표명' in _fin_df.columns else []
+        if kpi_opts:
+            _fin_sel = st.selectbox('지표 선택', kpi_opts, key='div_fin_kpi')
+            _ks = df[(df['부문']==_pd) & (df['지표명']==_fin_sel)].sort_values('월')
+            _months = _ks['월'].tolist()
+            _cp = _ks['당월 누계 계획'].tolist(); _ca = _ks['당월 누계 실적'].tolist()
+            CHART_LAYOUT = dict(
+                paper_bgcolor='#FFFFFF', plot_bgcolor='#FAFAFA',
+                font=dict(color='#444444', size=11), margin=dict(t=20,b=20,l=0,r=0),
+                xaxis=dict(tickvals=list(range(1,13)), ticktext=[f'{m}월' for m in range(1,13)],
+                           gridcolor='#F0F0F0', linecolor='#E5E5E5'),
+                yaxis=dict(gridcolor='#F0F0F0', linecolor='#E5E5E5'),
+                legend=dict(orientation='h', yanchor='bottom', y=1.02),
+            )
+            _fig = go.Figure()
+            _fig.add_trace(go.Scatter(x=_months, y=_cp, mode='lines', name='계획',
+                                      line=dict(color='#D1D5DB', dash='dash', width=2)))
+            _fig.add_trace(go.Scatter(x=_months, y=_ca, mode='lines+markers', name='실적',
+                                      line=dict(color='#EAB308', width=2),
+                                      marker=dict(size=6, color='#3B6EDE',
+                                                  line=dict(color='white', width=1.5))))
+            _fig.update_layout(height=260, **CHART_LAYOUT)
+            st.plotly_chart(_fig, use_container_width=True)
 
     st.stop()
 
