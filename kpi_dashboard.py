@@ -13,30 +13,33 @@ CAT_ORDER  = ['전략', '혁신', '일반']
 TYPE_ORDER = ['KPI', '재무목표']
 TL_INFO = {
     'green' : dict(bg='rgba(22,163,74,.08)',   fg='#16A34A', border='rgba(22,163,74,.3)',   label='정상', dot='🟢'),
-    'yellow': dict(bg='rgba(217,119,6,.08)',    fg='#D97706', border='rgba(217,119,6,.3)',   label='주의', dot='🟡'),
+    'yellow': dict(bg='rgba(234,179,8,.08)',    fg='#EAB308', border='rgba(234,179,8,.3)',   label='주의', dot='🟡'),
     'red'   : dict(bg='rgba(220,38,38,.08)',    fg='#DC2626', border='rgba(220,38,38,.3)',   label='차질', dot='🔴'),
-    'gray'  : dict(bg='rgba(107,114,128,.08)',  fg='#6B7280', border='rgba(107,114,128,.3)', label='N/A',  dot='⚪'),
+    'gray'  : dict(bg='rgba(156,163,175,.08)', fg='#9CA3AF', border='rgba(156,163,175,.3)', label='N/A',  dot='⚪'),
 }
 
-# ── Design tokens (shadcn/ui neutral) ─────────────────────────────────────────
-# Light (main content)
-BG       = 'oklch(1 0 0)'
-FG       = 'oklch(0.145 0 0)'
-CARD     = 'oklch(1 0 0)'
-BORDER   = 'oklch(0.922 0 0)'
-MUTED    = 'oklch(0.97 0 0)'
-MUTED_FG = 'oklch(0.556 0 0)'
-PRIMARY  = 'oklch(0.205 0 0)'
-PRIMARY_FG = 'oklch(0.985 0 0)'
-RADIUS   = '0.625rem'
-# Dark (sidebar)
-DARK_BG     = 'oklch(0.145 0 0)'
-DARK_CARD   = 'oklch(0.205 0 0)'
-DARK_FG     = 'oklch(0.985 0 0)'
-DARK_MUTED  = 'oklch(0.269 0 0)'
-DARK_MUTED_FG = 'oklch(0.556 0 0)'
-DARK_BORDER = 'oklch(1 0 0 / 10%)'
-SIDEBAR_PRIMARY = 'oklch(0.488 0.243 264.376)'  # blue accent
+# ── Design tokens (Executive Insight System) ──────────────────────────────────
+BG       = '#f7f9fb'   # surface / background
+FG       = '#191c1e'   # on-surface
+CARD     = '#ffffff'   # surface-container-lowest
+BORDER   = '#E2E8F0'   # border-subtle
+MUTED    = '#f2f4f6'   # surface-container-low
+MUTED_FG = '#43474f'   # on-surface-variant
+PRIMARY  = '#001e40'   # primary (dark navy)
+PRIMARY_FG = '#ffffff' # on-primary
+RADIUS   = '0.5rem'    # xl – cards
+RADIUS_SM = '0.25rem'  # lg – buttons/inputs
+# Header
+HEADER_DARK = '#0F172A'
+# Sidebar (light)
+SB_BG     = '#ffffff'
+SB_BORDER = '#E2E8F0'
+SB_FG     = '#191c1e'
+SB_MUTED  = '#f2f4f6'
+SB_MUTED_FG = '#43474f'
+SB_ACTIVE_BG = '#d5e3ff'   # primary-fixed
+SB_ACTIVE_FG = '#001b3c'   # on-primary-fixed
+SB_ACCENT    = '#0001c0'   # secondary (blue)
 
 st.set_page_config(
     page_title='핵심 KPI 실적 및 달성률',
@@ -46,8 +49,12 @@ st.set_page_config(
 )
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
+st.markdown("""<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">""", unsafe_allow_html=True)
 st.markdown(f"""<style>
 /* ── Base ──────────────────────────────────────────── */
+body, [data-testid="stApp"] {{ font-family:'Inter',sans-serif !important; }}
+.kc-val, .kc-sub b, [data-testid="stMetricValue"] {{ font-family:'JetBrains Mono',monospace !important; }}
+.sec-hd, .custom-hdr .hdr-title {{ font-family:'Hanken Grotesk',sans-serif !important; }}
 [data-testid="stAppViewContainer"], [data-testid="stApp"] {{
   background:{MUTED} !important; color:{FG} !important;
 }}
@@ -56,18 +63,18 @@ st.markdown(f"""<style>
 footer {{ display:none !important; }}
 @media(min-width:769px) {{ [data-testid="stHeader"] {{ display:none !important; }} }}
 @media(max-width:768px) {{
-  [data-testid="stHeader"] {{ background:{DARK_BG} !important; border-bottom:1px solid {DARK_BORDER} !important; }}
+  [data-testid="stHeader"] {{ background:{HEADER_DARK} !important; border-bottom:1px solid rgba(255,255,255,.1) !important; }}
   [data-testid="stToolbar"] {{ display:none !important; }}
 }}
 
-/* ── Sidebar ─────────────────────────────────────────── */
+/* ── Sidebar (light) ──────────────────────────────────── */
 section[data-testid="stSidebar"] {{
-  background:{DARK_BG} !important;
+  background:{SB_BG} !important;
   width:240px !important; min-width:240px !important;
-  border-right:1px solid {DARK_BORDER} !important;
+  border-right:1px solid {SB_BORDER} !important;
 }}
 section[data-testid="stSidebar"] > div:first-child {{
-  background:{DARK_BG} !important; width:240px !important;
+  background:{SB_BG} !important; width:240px !important;
   padding-top:0 !important; padding-bottom:160px !important;
 }}
 [data-testid="stSidebarResizeHandle"] {{ display:none !important; }}
@@ -75,42 +82,41 @@ section[data-testid="stSidebar"] > div:first-child {{
   section[data-testid="stSidebar"] {{ position:fixed !important; z-index:999 !important; height:100vh !important; }}
 }}
 section[data-testid="stSidebar"] label {{
-  color:{DARK_MUTED_FG} !important; font-size:.68rem !important;
+  color:{SB_MUTED_FG} !important; font-size:.68rem !important;
   letter-spacing:.04em; font-weight:500 !important;
 }}
 section[data-testid="stSidebar"] [data-baseweb="select"] > div {{
-  background:{DARK_CARD} !important; border:1px solid {DARK_BORDER} !important;
-  color:{DARK_FG} !important; border-radius:{RADIUS} !important;
+  background:{SB_BG} !important; border:1px solid {SB_BORDER} !important;
+  color:{SB_FG} !important; border-radius:{RADIUS_SM} !important;
 }}
 section[data-testid="stSidebar"] [data-baseweb="tag"] {{
-  background:{SIDEBAR_PRIMARY} !important; color:#fff !important; border-radius:4px !important;
+  background:{SB_ACCENT} !important; color:#fff !important; border-radius:4px !important;
 }}
-section[data-testid="stSidebar"] [data-testid="stToggle"] span {{ background:{SIDEBAR_PRIMARY} !important; }}
+section[data-testid="stSidebar"] [data-testid="stToggle"] span {{ background:{SB_ACCENT} !important; }}
 
 /* Sidebar nav buttons */
 section[data-testid="stSidebar"] [data-testid="baseButton-secondary"],
 section[data-testid="stSidebar"] [data-testid="baseButton-primary"] {{
   text-align:left !important; font-size:.8rem !important; font-weight:500 !important;
-  border-radius:{RADIUS} !important; padding:6px 10px !important; margin-bottom:1px !important;
+  border-radius:{RADIUS_SM} !important; padding:6px 10px !important; margin-bottom:1px !important;
 }}
 section[data-testid="stSidebar"] [data-testid="baseButton-secondary"] {{
-  background:transparent !important; border:none !important; color:{DARK_MUTED_FG} !important;
+  background:transparent !important; border:none !important; color:{SB_MUTED_FG} !important;
 }}
 section[data-testid="stSidebar"] [data-testid="baseButton-secondary"]:hover {{
-  background:{DARK_MUTED} !important; color:{DARK_FG} !important;
+  background:{SB_MUTED} !important; color:{SB_FG} !important;
 }}
 section[data-testid="stSidebar"] [data-testid="baseButton-primary"] {{
-  background:{SIDEBAR_PRIMARY} !important; border:none !important; color:#fff !important;
+  background:{SB_ACTIVE_BG} !important; border:none !important; color:{SB_ACTIVE_FG} !important;
 }}
 
-/* ── Custom sticky header ────────────────────────────── */
+/* ── Custom sticky header (dark) ────────────────────── */
 .custom-hdr {{
   position:sticky; top:0; z-index:100;
-  background:{CARD};
-  border-bottom:1px solid {BORDER};
+  background:{HEADER_DARK};
+  border-bottom:1px solid rgba(255,255,255,.08);
   padding:0 1.5rem; height:64px; margin:0 -1.5rem 1.5rem;
   display:flex; align-items:center; justify-content:space-between;
-  box-shadow:0 1px 3px 0 rgba(0,0,0,0.05),0 1px 2px -1px rgba(0,0,0,0.05);
 }}
 .hdr-brand {{ display:flex; align-items:center; gap:12px; }}
 .hdr-logo {{
@@ -118,15 +124,15 @@ section[data-testid="stSidebar"] [data-testid="baseButton-primary"] {{
   border-radius:{RADIUS};
   display:flex; align-items:center; justify-content:center; font-size:1rem;
 }}
-.hdr-title  {{ font-size:.95rem; font-weight:600; color:{FG}; }}
-.hdr-sub    {{ font-size:.67rem; color:{MUTED_FG}; margin-top:1px; }}
+.hdr-title  {{ font-size:.95rem; font-weight:700; color:#ffffff; font-family:'Hanken Grotesk',sans-serif; }}
+.hdr-sub    {{ font-size:.67rem; color:rgba(255,255,255,.5); margin-top:1px; }}
 .hdr-right  {{ display:flex; align-items:center; gap:10px; }}
 .hdr-badge  {{
-  background:{PRIMARY}; color:{PRIMARY_FG};
-  border:1px solid {PRIMARY}; border-radius:calc({RADIUS} - 2px);
-  padding:4px 14px; font-size:.8rem; font-weight:600;
+  background:rgba(255,255,255,.1); color:rgba(255,255,255,.85);
+  border:1px solid rgba(255,255,255,.15); border-radius:{RADIUS_SM};
+  padding:4px 14px; font-size:.75rem; font-weight:600;
 }}
-.hdr-date {{ font-size:.68rem; color:{MUTED_FG}; }}
+.hdr-date {{ font-size:.68rem; color:rgba(255,255,255,.55); }}
 
 /* ── Section heading ─────────────────────────────────── */
 .sec-hd {{
@@ -154,10 +160,10 @@ section[data-testid="stSidebar"] [data-testid="baseButton-primary"] {{
   transform:translateY(-1px);
 }}
 .kc::before {{ content:''; position:absolute; top:0;left:0;right:0; height:3px; }}
-.kc-blue::before   {{ background:oklch(0.488 0.243 264.376); }}
+.kc-blue::before   {{ background:#0001c0; }}
 .kc-green::before  {{ background:#16A34A; }}
 .kc-red::before    {{ background:#DC2626; }}
-.kc-yellow::before {{ background:#D97706; }}
+.kc-yellow::before {{ background:#EAB308; }}
 .kc-purple::before {{ background:#7C3AED; }}
 .kc-teal::before   {{ background:#0891B2; }}
 .kc-ico  {{ font-size:.95rem; margin-bottom:.35rem; }}
@@ -172,8 +178,8 @@ section[data-testid="stSidebar"] [data-testid="baseButton-primary"] {{
   box-shadow:0 1px 2px 0 rgba(0,0,0,0.04);
   transition:box-shadow .15s,border-color .15s;
 }}
-.dc:hover {{ box-shadow:0 4px 8px -2px rgba(0,0,0,0.06); border-color:oklch(0.708 0 0); }}
-.dc.sel   {{ background:oklch(0.97 0.02 264); border-color:oklch(0.488 0.243 264.376); box-shadow:0 0 0 2px oklch(0.488 0.243 264.376 / 0.15); }}
+.dc:hover {{ box-shadow:0 4px 8px -2px rgba(0,0,0,0.06); border-color:#9CA3AF; }}
+.dc.sel   {{ background:#eef2ff; border-color:{SB_ACCENT}; box-shadow:0 0 0 2px rgba(0,1,192,0.12); }}
 .dc .dnm  {{ font-size:.75rem; font-weight:600; color:{FG}; }}
 .dc .davg {{ font-size:1.1rem; font-weight:700; }}
 .dc .dcnt {{ font-size:.6rem; color:{MUTED_FG}; margin:1px 0 4px; }}
@@ -189,13 +195,13 @@ section[data-testid="stSidebar"] [data-testid="baseButton-primary"] {{
 
 /* ── Top10 item ──────────────────────────────────────── */
 .t10 {{ display:flex; gap:6px; padding:5px 0; border-bottom:1px solid {MUTED}; font-size:.73rem; align-items:center; }}
-.t10 .rk {{ color:oklch(0.708 0 0); font-weight:600; width:16px; flex-shrink:0; }}
-.t10 .nm {{ flex:1; color:oklch(0.371 0 0); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }}
+.t10 .rk {{ color:#9CA3AF; font-weight:600; width:16px; flex-shrink:0; }}
+.t10 .nm {{ flex:1; color:#43474f; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }}
 .t10 .vl {{ font-weight:700; flex-shrink:0; }}
 
 /* ── Category bar ────────────────────────────────────── */
 .cat-row {{ display:flex; gap:8px; align-items:center; padding:5px 0; border-bottom:1px solid {MUTED}; font-size:.73rem; }}
-.cat-row .cat-nm {{ width:36px; font-weight:600; color:oklch(0.371 0 0); }}
+.cat-row .cat-nm {{ width:36px; font-weight:600; color:#43474f; }}
 .cat-bar-wrap {{ flex:1; background:{MUTED}; border-radius:99px; height:6px; }}
 .cat-bar {{ height:6px; border-radius:99px; }}
 
@@ -215,11 +221,11 @@ section[data-testid="stSidebar"] [data-testid="baseButton-primary"] {{
 }}
 [data-testid="baseButton-secondary"] {{
   background:{CARD} !important; border:1px solid {BORDER} !important;
-  color:oklch(0.371 0 0) !important; border-radius:{RADIUS} !important; font-weight:500 !important;
+  color:#43474f !important; border-radius:{RADIUS} !important; font-weight:500 !important;
   box-shadow:0 1px 2px 0 rgba(0,0,0,0.04) !important;
 }}
 [data-testid="baseButton-secondary"]:hover {{
-  background:{MUTED} !important; border-color:oklch(0.708 0 0) !important;
+  background:{MUTED} !important; border-color:#9CA3AF !important;
 }}
 [data-testid="baseButton-primary"] {{
   background:{PRIMARY} !important; border:1px solid {PRIMARY} !important;
@@ -240,7 +246,7 @@ section[data-testid="stSidebar"] [data-testid="baseButton-primary"] {{
 [data-testid="stCaptionContainer"] p {{ color:{MUTED_FG} !important; }}
 [data-testid="stDataEditor"] table {{ background:{CARD} !important; }}
 [data-testid="stDataEditor"] th {{
-  background:{MUTED} !important; color:oklch(0.371 0 0) !important;
+  background:{MUTED} !important; color:#43474f !important;
   border-color:{BORDER} !important; font-weight:600 !important; font-size:.67rem !important;
 }}
 [data-testid="stDataEditor"] td {{
@@ -274,8 +280,8 @@ def get_tl(ach):
 def fmt_ach(ach): return f"{ach:.1f}%" if ach is not None else "N/A"
 
 def stk_html(cnt, total):
-    c = dict(green='#16A34A', yellow='#D97706', red='#DC2626', gray='#D1D5DB')
-    if not total: return '<div class="stk"><div style="flex:1;background:oklch(0.922 0 0)"></div></div>'
+    c = dict(green='#16A34A', yellow='#EAB308', red='#DC2626', gray='#D1D5DB')
+    if not total: return f'<div class="stk"><div style="flex:1;background:{BORDER}"></div></div>'
     segs = ''.join(f'<div style="flex:{cnt.get(k,0)};background:{c[k]}"></div>'
                    for k in ['green','yellow','red'] if cnt.get(k,0)>0)
     return f'<div class="stk">{segs}</div>'
@@ -347,19 +353,19 @@ if _fb_ready and not st.session_state.logged_in:
 # ══════════════════════════════════════════════════════
 # SIDEBAR
 # ══════════════════════════════════════════════════════
-_user_line = (f'<div style="font-size:.6rem;color:{DARK_MUTED_FG};margin-top:4px;'
+_user_line = (f'<div style="font-size:.6rem;color:{SB_MUTED_FG};margin-top:4px;'
               f'overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
               f'🔒 {st.session_state.user_email}</div>'
               if st.session_state.logged_in else '')
 st.sidebar.markdown(f"""
-<div style="background:{DARK_BG};padding:1.2rem 1rem 1rem;
-            border-bottom:1px solid {DARK_BORDER};margin:-1rem -1rem .75rem">
+<div style="background:{SB_BG};padding:1.2rem 1rem 1rem;
+            border-bottom:1px solid {SB_BORDER};margin:-1rem -1rem .75rem">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-    <div style="background:{SIDEBAR_PRIMARY};border-radius:{RADIUS};
-                width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:1rem">📊</div>
+    <div style="background:{PRIMARY};border-radius:{RADIUS};
+                width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:1rem;color:#fff">📊</div>
     <div style="overflow:hidden">
-      <div style="font-size:.82rem;font-weight:600;color:{DARK_FG};line-height:1.2">핵심 KPI</div>
-      <div style="font-size:.63rem;color:{DARK_MUTED_FG};line-height:1.2">실적 및 달성률</div>
+      <div style="font-size:.82rem;font-weight:600;color:{SB_FG};line-height:1.2">핵심 KPI</div>
+      <div style="font-size:.63rem;color:{SB_MUTED_FG};line-height:1.2">실적 및 달성률</div>
       {_user_line}
     </div>
   </div>
@@ -372,13 +378,13 @@ if st.session_state.logged_in:
         st.rerun()
 
 # 보고 월
-st.sidebar.markdown(f'<p style="font-size:.65rem;color:{DARK_MUTED_FG};font-weight:500;letter-spacing:.04em;margin:.5rem 0 .2rem">📅 보고 월</p>', unsafe_allow_html=True)
+st.sidebar.markdown(f'<p style="font-size:.65rem;color:{SB_MUTED_FG};font-weight:500;letter-spacing:.04em;margin:.5rem 0 .2rem">📅 보고 월</p>', unsafe_allow_html=True)
 m_opts = ['미선택'] + [f'{m}월' for m in range(1,13)]
 m_sel  = st.sidebar.selectbox('보고 월', m_opts, index=0, key='f_month', label_visibility='collapsed')
 month  = None if m_sel == '미선택' else int(m_sel[:-1])
 
 # Navigation
-st.sidebar.markdown(f'<div style="margin:.9rem 0 .3rem;font-size:.6rem;color:{DARK_MUTED_FG};font-weight:600;letter-spacing:.08em;text-transform:uppercase">Navigation</div>', unsafe_allow_html=True)
+st.sidebar.markdown(f'<div style="margin:.9rem 0 .3rem;font-size:.6rem;color:{SB_MUTED_FG};font-weight:600;letter-spacing:.08em;text-transform:uppercase">Navigation</div>', unsafe_allow_html=True)
 _cur_page = st.session_state.get('page', 'home')
 for _icon, _label, _key in [
     ('📊', '전사 요약',    'home'),
@@ -390,7 +396,7 @@ for _icon, _label, _key in [
         st.session_state.page = _key
         st.rerun()
 
-st.sidebar.markdown(f'<hr style="border:none;border-top:1px solid {DARK_BORDER};margin:.6rem 0"><div style="font-size:.6rem;color:{DARK_MUTED_FG};font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem">Filters</div>', unsafe_allow_html=True)
+st.sidebar.markdown(f'<hr style="border:none;border-top:1px solid {SB_BORDER};margin:.6rem 0"><div style="font-size:.6rem;color:{SB_MUTED_FG};font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem">Filters</div>', unsafe_allow_html=True)
 
 sel_div  = st.sidebar.selectbox('🏢 부문',    ['전체'] + DIV_ORDER,  key='f_div')
 sel_cat  = st.sidebar.selectbox('📁 분류',    ['전체'] + CAT_ORDER,  key='f_cat')
@@ -547,20 +553,20 @@ _legend_rows = ''.join(f"""
       <div style="width:8px;height:8px;border-radius:50%;background:{TL_INFO[k]['fg']};flex-shrink:0"></div>
       <div>
         <span style="font-size:.72rem;color:{TL_INFO[k]['fg']};font-weight:600">{TL_INFO[k]['label']}</span>
-        <span style="font-size:.6rem;color:{DARK_MUTED_FG};margin-left:4px">{_tl_thresholds[k]}</span>
+        <span style="font-size:.6rem;color:{SB_MUTED_FG};margin-left:4px">{_tl_thresholds[k]}</span>
       </div>
     </div>
-    <span style="font-size:.72rem;color:{TL_INFO[k]['fg']};font-weight:700">{cnt.get(k,0)}<span style="font-size:.6rem;color:{DARK_MUTED_FG};font-weight:400">건</span></span>
+    <span style="font-size:.72rem;color:{TL_INFO[k]['fg']};font-weight:700">{cnt.get(k,0)}<span style="font-size:.6rem;color:{SB_MUTED_FG};font-weight:400">건</span></span>
   </div>""" for k in ['green','yellow','red'])
 
 st.sidebar.markdown(f"""
 <div style="position:fixed;bottom:0;left:0;width:240px;
-            padding:.8rem 1rem .9rem;border-top:1px solid {DARK_BORDER};
-            background:{DARK_BG};box-sizing:border-box;z-index:200">
-  <div style="font-size:.6rem;color:{DARK_MUTED_FG};font-weight:600;letter-spacing:.08em;
+            padding:.8rem 1rem .9rem;border-top:1px solid {SB_BORDER};
+            background:{SB_BG};box-sizing:border-box;z-index:200">
+  <div style="font-size:.6rem;color:{SB_MUTED_FG};font-weight:600;letter-spacing:.08em;
               text-transform:uppercase;margin-bottom:.45rem">신호등 범례</div>
   {_legend_rows}
-  <div style="font-size:.58rem;color:oklch(0.371 0 0);margin-top:.55rem;padding-top:.45rem;border-top:1px solid {DARK_BORDER}">
+  <div style="font-size:.58rem;color:{SB_MUTED_FG};margin-top:.55rem;padding-top:.45rem;border-top:1px solid {SB_BORDER}">
     Data as of {date.today():%Y-%m-%d} · {month}월 기준
   </div>
 </div>""", unsafe_allow_html=True)
@@ -703,21 +709,21 @@ st.markdown(f"""
   <div class="kc kc-green">
     <div class="kc-ico">🟢</div>
     <div class="kc-lbl">정상 달성</div>
-    <div class="kc-val" style="color:#16A34A">{cnt['green']}<span style="font-size:1rem;font-weight:400;color:oklch(0.708 0 0)">건</span></div>
+    <div class="kc-val" style="color:#16A34A">{cnt['green']}<span style="font-size:1rem;font-weight:400;color:#9CA3AF">건</span></div>
     <div class="kc-sub">{cnt['green']/tot*100 if tot else 0:.0f}% of {tot}건</div>
   </div>
 
   <div class="kc kc-red">
     <div class="kc-ico">🔴</div>
     <div class="kc-lbl">차질 KPI</div>
-    <div class="kc-val" style="color:#DC2626">{cnt['red']}<span style="font-size:1rem;font-weight:400;color:oklch(0.708 0 0)">건</span></div>
+    <div class="kc-val" style="color:#DC2626">{cnt['red']}<span style="font-size:1rem;font-weight:400;color:#9CA3AF">건</span></div>
     <div class="kc-sub">{cnt['red']/tot*100 if tot else 0:.0f}% of {tot}건 · 즉시 점검 필요</div>
   </div>
 
   <div class="kc kc-yellow">
     <div class="kc-ico">⚠️</div>
     <div class="kc-lbl">전월 대비 급락</div>
-    <div class="kc-val" style="color:#D97706">{warn_cnt}<span style="font-size:1rem;font-weight:400;color:oklch(0.708 0 0)">건</span></div>
+    <div class="kc-val" style="color:#EAB308">{warn_cnt}<span style="font-size:1rem;font-weight:400;color:#9CA3AF">건</span></div>
     <div class="kc-sub">-{WARN_DROP}%p 이상 하락 경보</div>
   </div>
 
@@ -909,7 +915,7 @@ else:
             fig.add_trace(go.Scatter(x=months,y=c_plan,mode='lines',name='계획',
                                      line=dict(color='#D1D5DB',dash='dash',width=2)))
             fig.add_trace(go.Scatter(x=months,y=c_act,mode='lines+markers',name='실적',
-                                     line=dict(color='oklch(0.488 0.243 264.376)',width=2),
+                                     line=dict(color='#EAB308',width=2),
                                      marker=dict(size=6,color='#3B6EDE',line=dict(color='white',width=1.5))))
             fig.update_layout(height=280, **CHART_LAYOUT)
             st.plotly_chart(fig, use_container_width=True)
