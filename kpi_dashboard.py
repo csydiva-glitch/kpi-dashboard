@@ -532,9 +532,11 @@ key_cnt  = int((fdf['차별화'].astype(str).str.upper()=='Y').sum()) if '차별
 warn_cnt = int(fdf['_warn'].sum())
 
 fin_mask = (fdf_all['구분']=='재무목표') if '구분' in fdf_all.columns else pd.Series(False, index=fdf_all.index)
-fin_avg  = fdf_all.loc[fin_mask,'_ach'].dropna().mean() if fin_mask.any() else None
-key_avg  = fdf.loc[fdf['차별화'].astype(str).str.upper()=='Y','_ach'].dropna().mean() \
-           if '차별화' in fdf.columns else None
+_fin_s   = fdf_all.loc[fin_mask,'_ach'].dropna() if fin_mask.any() else pd.Series(dtype=float)
+fin_avg  = _fin_s.mean() if len(_fin_s) else None
+_key_s   = fdf.loc[fdf['차별화'].astype(str).str.upper()=='Y','_ach'].dropna() \
+           if '차별화' in fdf.columns else pd.Series(dtype=float)
+key_avg  = _key_s.mean() if len(_key_s) else None
 avg_delta = (avg - prev_avg) if (avg is not None and prev_avg is not None) else None
 
 # ── 신호등 범례 — 사이드바 하단 고정 ─────────────────────────────────────────
