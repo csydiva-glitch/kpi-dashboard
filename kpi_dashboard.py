@@ -277,7 +277,7 @@ def stk_html(cnt, total):
     c = dict(green='#16A34A', yellow='#D97706', red='#DC2626', gray='#D1D5DB')
     if not total: return '<div class="stk"><div style="flex:1;background:oklch(0.922 0 0)"></div></div>'
     segs = ''.join(f'<div style="flex:{cnt.get(k,0)};background:{c[k]}"></div>'
-                   for k in ['green','yellow','red','gray'] if cnt.get(k,0)>0)
+                   for k in ['green','yellow','red'] if cnt.get(k,0)>0)
     return f'<div class="stk">{segs}</div>'
 
 def trend_html(delta):
@@ -528,9 +528,11 @@ def apply_filter(d):
     return d[mask]
 
 fdf = apply_filter(mdf)
+fdf = fdf[fdf['_tl'] != 'gray']  # 미산출 제외
 
 if month > 1:
     prev_fdf = apply_filter(df[df['월']==month-1].copy())
+    prev_fdf = prev_fdf[prev_fdf['_tl'] != 'gray']
     prev_avg = prev_fdf['_ach'].dropna().mean() if len(prev_fdf) else None
 else:
     prev_avg = None
@@ -560,7 +562,7 @@ _legend_rows = ''.join(f"""
       </div>
     </div>
     <span style="font-size:.72rem;color:{TL_INFO[k]['fg']};font-weight:700">{cnt.get(k,0)}<span style="font-size:.6rem;color:{DARK_MUTED_FG};font-weight:400">건</span></span>
-  </div>""" for k in ['green','yellow','red','gray'])
+  </div>""" for k in ['green','yellow','red'])
 
 st.sidebar.markdown(f"""
 <div style="position:fixed;bottom:0;left:0;width:240px;
@@ -618,7 +620,7 @@ if st.session_state.get('page', 'home') == 'ki_detail':
   {stk_html(kcc, kt)}
   <div style="font-size:.6rem;color:{MUTED_FG};display:flex;gap:5px;margin-top:2px">
     <span>🟢{kcc['green']}</span><span>🟡{kcc['yellow']}</span>
-    <span>🔴{kcc['red']}</span><span>⚪{kcc['gray']}</span>
+    <span>🔴{kcc['red']}</span>
   </div>
 </div>""", unsafe_allow_html=True)
 
@@ -761,7 +763,7 @@ for col, div in zip(dcols, DIV_ORDER):
           {stk_html(dc, dt)}
           <div style="font-size:.6rem;color:{MUTED_FG};display:flex;gap:5px;margin-top:2px">
             <span>🟢{dc['green']}</span><span>🟡{dc['yellow']}</span>
-            <span>🔴{dc['red']}</span><span>⚪{dc['gray']}</span>
+            <span>🔴{dc['red']}</span>
           </div>
         </div>""", unsafe_allow_html=True)
         if st.button('✓' if is_sel else '▶', key=f'db_{div}',
@@ -983,7 +985,7 @@ for col, cat in zip(cat_cols, CAT_ORDER):
         ca = cat_rows['_ach'].dropna().mean()
         cc = {k: int((cat_rows['_tl']==k).sum()) for k in TL_INFO}
         items = ''
-        for k in ['green','yellow','red','gray']:
+        for k in ['green','yellow','red']:
             n = cc[k]
             if n==0: continue
             pct = n/ct*100
