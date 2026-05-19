@@ -136,40 +136,46 @@ section[data-testid="stSidebar"] [data-testid="baseButton-primary"] {{
 
 /* ── Section heading ─────────────────────────────────── */
 .sec-hd {{
-  font-size:.68rem; font-weight:600; color:{MUTED_FG};
+  font-size:.72rem; font-weight:700; color:{MUTED_FG};
   letter-spacing:.08em; text-transform:uppercase;
-  border-left:2px solid {PRIMARY}; padding:0 0 0 8px;
-  margin:1.5rem 0 .75rem;
+  font-family:'Inter',sans-serif;
+  padding:.5rem 0 .75rem;
+  margin:1.25rem 0 .75rem;
+  border-bottom:1px solid {BORDER};
 }}
 
 /* ── KPI card grid ───────────────────────────────────── */
 .kpi-grid {{
-  display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem; margin-bottom:1.5rem;
+  display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:1.5rem;
 }}
 @media(max-width:1200px) {{ .kpi-grid {{ grid-template-columns:repeat(2,1fr); }} }}
 @media(max-width:640px)  {{ .kpi-grid {{ grid-template-columns:1fr; }} }}
 
 .kc {{
   background:{CARD}; border:1px solid {BORDER}; border-radius:{RADIUS};
-  padding:1.25rem 1.4rem; position:relative; overflow:hidden;
-  box-shadow:0 1px 3px 0 rgba(0,0,0,0.05),0 1px 2px -1px rgba(0,0,0,0.05);
-  transition:box-shadow .15s,transform .15s;
+  padding:1.5rem 1.5rem 1.25rem;
+  display:flex; flex-direction:column; justify-content:space-between;
+  transition:box-shadow .15s;
 }}
-.kc:hover {{
-  box-shadow:0 4px 8px -2px rgba(0,0,0,0.08),0 2px 4px -2px rgba(0,0,0,0.06);
-  transform:translateY(-1px);
+.kc:hover {{ box-shadow:0 4px 12px rgba(0,0,0,0.07); }}
+/* 색상 구분: 좌측 accent 선 */
+.kc-blue   {{ border-left:3px solid #0001c0; }}
+.kc-green  {{ border-left:3px solid #16A34A; }}
+.kc-red    {{ border-left:3px solid #DC2626; }}
+.kc-yellow {{ border-left:3px solid #EAB308; }}
+.kc-purple {{ border-left:3px solid #7C3AED; }}
+.kc-teal   {{ border-left:3px solid #0891B2; }}
+.kc-ico  {{ display:none; }}
+.kc-lbl  {{
+  font-size:.68rem; color:{MUTED_FG}; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase;
+  font-family:'Inter',sans-serif; margin-bottom:.75rem;
 }}
-.kc::before {{ content:''; position:absolute; top:0;left:0;right:0; height:3px; }}
-.kc-blue::before   {{ background:#0001c0; }}
-.kc-green::before  {{ background:#16A34A; }}
-.kc-red::before    {{ background:#DC2626; }}
-.kc-yellow::before {{ background:#EAB308; }}
-.kc-purple::before {{ background:#7C3AED; }}
-.kc-teal::before   {{ background:#0891B2; }}
-.kc-ico  {{ font-size:.95rem; margin-bottom:.35rem; }}
-.kc-lbl  {{ font-size:.63rem; color:{MUTED_FG}; font-weight:500; letter-spacing:.06em; text-transform:uppercase; margin-bottom:.3rem; }}
-.kc-val  {{ font-size:1.9rem; font-weight:700; line-height:1; margin-bottom:.4rem; color:{FG}; }}
-.kc-sub  {{ font-size:.68rem; color:{MUTED_FG}; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }}
+.kc-val  {{
+  font-size:2.2rem; font-weight:600; line-height:1; margin-bottom:.6rem; color:{FG};
+  font-family:'JetBrains Mono',monospace; letter-spacing:-0.01em;
+}}
+.kc-sub  {{ font-size:.72rem; color:{MUTED_FG}; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }}
 
 /* ── Division card ───────────────────────────────────── */
 .dc {{
@@ -358,17 +364,16 @@ _user_line = (f'<div style="font-size:.6rem;color:{SB_MUTED_FG};margin-top:4px;'
               f'🔒 {st.session_state.user_email}</div>'
               if st.session_state.logged_in else '')
 st.sidebar.markdown(f"""
-<div style="background:{SB_BG};padding:1.2rem 1rem 1rem;
+<div style="background:{SB_BG};padding:1.4rem 1rem 1rem;
             border-bottom:1px solid {SB_BORDER};margin:-1rem -1rem .75rem">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-    <div style="background:{PRIMARY};border-radius:{RADIUS};
-                width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:1rem;color:#fff">📊</div>
-    <div style="overflow:hidden">
-      <div style="font-size:.82rem;font-weight:600;color:{SB_FG};line-height:1.2">핵심 KPI</div>
-      <div style="font-size:.63rem;color:{SB_MUTED_FG};line-height:1.2">실적 및 달성률</div>
-      {_user_line}
-    </div>
+  <div style="font-size:1rem;font-weight:700;color:{PRIMARY};
+              font-family:'Hanken Grotesk',sans-serif;line-height:1.2;margin-bottom:2px">
+    Hansol Paper
   </div>
+  <div style="font-size:.72rem;color:{SB_MUTED_FG};margin-bottom:6px">
+    Executive KPI Dashboard
+  </div>
+  {_user_line}
 </div>""", unsafe_allow_html=True)
 
 if st.session_state.logged_in:
@@ -420,7 +425,8 @@ st.markdown(f"""
   <div class="hdr-brand">
     <div class="hdr-logo">📊</div>
     <div>
-      <div class="hdr-title">핵심 KPI 실적 및 달성률</div>
+      <div class="hdr-title">Hansol Paper Executive Dashboard</div>
+      <div class="hdr-sub">핵심 KPI 실적 및 달성률</div>
     </div>
   </div>
   <div class="hdr-right">
