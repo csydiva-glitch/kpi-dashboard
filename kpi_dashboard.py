@@ -514,8 +514,8 @@ def apply_filter(d):
         mask &= d['차별화'].astype(str).str.strip().str.upper() == 'Y'
     return d[mask]
 
-fdf = apply_filter(mdf)
-fdf = fdf[fdf['_tl'] != 'gray']  # 미산출 제외
+fdf_all = apply_filter(mdf)               # gray 포함 전체 (재무목표 계산용)
+fdf = fdf_all[fdf_all['_tl'] != 'gray']  # 미산출 제외 (KPI 통계용)
 
 if month > 1:
     prev_fdf = apply_filter(df[df['월']==month-1].copy())
@@ -531,8 +531,8 @@ cnt  = {k: int((fdf['_tl']==k).sum()) for k in TL_INFO}
 key_cnt  = int((fdf['차별화'].astype(str).str.upper()=='Y').sum()) if '차별화' in fdf.columns else 0
 warn_cnt = int(fdf['_warn'].sum())
 
-fin_mask = (fdf['구분']=='재무목표') if '구분' in fdf.columns else pd.Series(False, index=fdf.index)
-fin_avg  = fdf.loc[fin_mask,'_ach'].dropna().mean() if fin_mask.any() else None
+fin_mask = (fdf_all['구분']=='재무목표') if '구분' in fdf_all.columns else pd.Series(False, index=fdf_all.index)
+fin_avg  = fdf_all.loc[fin_mask,'_ach'].dropna().mean() if fin_mask.any() else None
 key_avg  = fdf.loc[fdf['차별화'].astype(str).str.upper()=='Y','_ach'].dropna().mean() \
            if '차별화' in fdf.columns else None
 avg_delta = (avg - prev_avg) if (avg is not None and prev_avg is not None) else None
