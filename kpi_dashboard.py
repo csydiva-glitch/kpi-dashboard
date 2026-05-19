@@ -146,10 +146,13 @@ section[data-testid="stSidebar"] [data-testid="baseButton-primary"] {{
 
 /* ── KPI card grid ───────────────────────────────────── */
 .kpi-grid {{
+  display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:.75rem;
+}}
+.kpi-grid-sub {{
   display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:1.5rem;
 }}
-@media(max-width:1200px) {{ .kpi-grid {{ grid-template-columns:repeat(2,1fr); }} }}
-@media(max-width:640px)  {{ .kpi-grid {{ grid-template-columns:1fr; }} }}
+@media(max-width:1200px) {{ .kpi-grid {{ grid-template-columns:repeat(2,1fr); }} .kpi-grid-sub {{ grid-template-columns:repeat(2,1fr); }} }}
+@media(max-width:640px)  {{ .kpi-grid,.kpi-grid-sub {{ grid-template-columns:1fr; }} }}
 
 .kc {{
   background:{CARD}; border:1px solid {BORDER}; border-radius:{RADIUS};
@@ -690,49 +693,43 @@ def avg_color(a):
 
 st.markdown(f"""
 <div class="kpi-grid">
-
   <div class="kc kc-blue">
-    <div class="kc-ico">📈</div>
     <div class="kc-lbl">전사 평균 달성률</div>
     <div class="kc-val" style="color:{avg_color(avg)}">{fmt_ach(avg)}</div>
     <div class="kc-sub">KPI {tot}건 전체 · {kc_trend(avg_delta)}</div>
   </div>
-
-  <div class="kc kc-purple">
-    <div class="kc-ico">⭐</div>
-    <div class="kc-lbl">핵심 KPI 달성률</div>
-    <div class="kc-val" style="color:{avg_color(key_avg)}">{fmt_ach(key_avg)}</div>
-    <div class="kc-sub">핵심 {key_cnt}건 기준</div>
-  </div>
-
-  <div class="kc kc-teal">
-    <div class="kc-ico">💰</div>
-    <div class="kc-lbl">재무목표 달성률</div>
-    <div class="kc-val" style="color:{avg_color(fin_avg)}">{fmt_ach(fin_avg)}</div>
-    <div class="kc-sub">재무목표 {int(fin_mask.sum())}건 기준</div>
-  </div>
-
   <div class="kc kc-green">
-    <div class="kc-ico">🟢</div>
     <div class="kc-lbl">정상 달성</div>
     <div class="kc-val" style="color:#16A34A">{cnt['green']}<span style="font-size:1rem;font-weight:400;color:#9CA3AF">건</span></div>
     <div class="kc-sub">{cnt['green']/tot*100 if tot else 0:.0f}% of {tot}건</div>
   </div>
-
+  <div class="kc kc-yellow">
+    <div class="kc-lbl">주의 KPI</div>
+    <div class="kc-val" style="color:#EAB308">{cnt['yellow']}<span style="font-size:1rem;font-weight:400;color:#9CA3AF">건</span></div>
+    <div class="kc-sub">{cnt['yellow']/tot*100 if tot else 0:.0f}% of {tot}건</div>
+  </div>
   <div class="kc kc-red">
-    <div class="kc-ico">🔴</div>
     <div class="kc-lbl">차질 KPI</div>
     <div class="kc-val" style="color:#DC2626">{cnt['red']}<span style="font-size:1rem;font-weight:400;color:#9CA3AF">건</span></div>
-    <div class="kc-sub">{cnt['red']/tot*100 if tot else 0:.0f}% of {tot}건 · 즉시 점검 필요</div>
+    <div class="kc-sub">{cnt['red']/tot*100 if tot else 0:.0f}% of {tot}건 · 즉시 점검</div>
   </div>
-
+</div>
+<div class="kpi-grid-sub">
+  <div class="kc kc-purple">
+    <div class="kc-lbl">핵심 KPI 달성률</div>
+    <div class="kc-val" style="color:{avg_color(key_avg)}">{fmt_ach(key_avg)}</div>
+    <div class="kc-sub">핵심 {key_cnt}건 기준</div>
+  </div>
+  <div class="kc kc-teal">
+    <div class="kc-lbl">재무목표 달성률</div>
+    <div class="kc-val" style="color:{avg_color(fin_avg)}">{fmt_ach(fin_avg)}</div>
+    <div class="kc-sub">재무목표 {int(fin_mask.sum())}건 기준</div>
+  </div>
   <div class="kc kc-yellow">
-    <div class="kc-ico">⚠️</div>
     <div class="kc-lbl">전월 대비 급락</div>
     <div class="kc-val" style="color:#EAB308">{warn_cnt}<span style="font-size:1rem;font-weight:400;color:#9CA3AF">건</span></div>
-    <div class="kc-sub">-{WARN_DROP}%p 이상 하락 경보</div>
+    <div class="kc-sub">−{WARN_DROP}%p 이상 하락 경보</div>
   </div>
-
 </div>""", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════
@@ -741,36 +738,50 @@ st.markdown(f"""
 st.markdown('<div id="sec-div"></div>', unsafe_allow_html=True)
 st.markdown('<div class="sec-hd">부문별 현황</div>', unsafe_allow_html=True)
 
-if st.session_state.sel_div:
-    if st.button(f'← 전체 보기  (현재: {st.session_state.sel_div})', key='reset_div'):
-        st.session_state.sel_div = None
-        st.rerun()
+_div_rows_html = ''
+for _div in DIV_ORDER:
+    _dr  = fdf[fdf['부문']==_div] if '부문' in fdf.columns else pd.DataFrame()
+    _dt  = len(_dr)
+    _dc  = {k: int((_dr['_tl']==k).sum()) for k in TL_INFO}
+    _da  = _dr['_ach'].dropna().mean() if _dt else None
+    _dtl = get_tl(_da)
+    _dk  = int((_dr['차별화'].astype(str).str.upper()=='Y').sum()) if '차별화' in _dr.columns else 0
+    _clr = TL_INFO[_dtl]['fg']
+    _ach_str = f"{_da:.1f}%" if _da is not None else "N/A"
+    _bar = stk_html(_dc, _dt).replace('\n','')
+    _div_rows_html += f"""
+      <tr style="border-bottom:1px solid {BORDER}">
+        <td style="padding:.7rem 1rem;font-weight:600;color:{FG};font-size:.82rem">{_div}</td>
+        <td style="padding:.7rem 1rem;color:{_clr};font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.9rem">{_ach_str}</td>
+        <td style="padding:.7rem 1rem;text-align:center;color:#16A34A;font-weight:700;font-size:.82rem">{_dc['green']}</td>
+        <td style="padding:.7rem 1rem;text-align:center;color:#EAB308;font-weight:700;font-size:.82rem">{_dc['yellow']}</td>
+        <td style="padding:.7rem 1rem;text-align:center;color:#DC2626;font-weight:700;font-size:.82rem">{_dc['red']}</td>
+        <td style="padding:.7rem 1rem;text-align:center;color:{MUTED_FG};font-size:.82rem">{_dt}</td>
+        <td style="padding:.7rem 1rem;text-align:center;color:{MUTED_FG};font-size:.82rem">{_dk}</td>
+        <td style="padding:.7rem 1rem;min-width:80px">{_bar}</td>
+      </tr>"""
 
-dcols = st.columns(len(DIV_ORDER))
-for col, div in zip(dcols, DIV_ORDER):
-    dr = fdf[fdf['부문']==div] if '부문' in fdf.columns else pd.DataFrame()
-    dt = len(dr)
-    dc = {k: int((dr['_tl']==k).sum()) for k in TL_INFO}
-    da = dr['_ach'].dropna().mean() if dt else 0.0
-    dtl = get_tl(da if dt else None)
-    dk  = int((dr['차별화'].astype(str).str.upper()=='Y').sum()) if '차별화' in dr.columns else 0
-    is_sel = st.session_state.sel_div == div
-    with col:
-        st.markdown(f"""
-        <div class="dc {'sel' if is_sel else ''}">
-          <div class="dnm">{div}</div>
-          <div class="davg" style="color:{TL_INFO[dtl]['fg']}">{da:.0f}%</div>
-          <div class="dcnt">전체 {dt} · ⭐{dk}</div>
-          {stk_html(dc, dt)}
-          <div style="font-size:.6rem;color:{MUTED_FG};display:flex;gap:5px;margin-top:2px">
-            <span>🟢{dc['green']}</span><span>🟡{dc['yellow']}</span>
-            <span>🔴{dc['red']}</span>
-          </div>
-        </div>""", unsafe_allow_html=True)
-        if st.button('✓' if is_sel else '▶', key=f'db_{div}',
-                     use_container_width=True, type='primary' if is_sel else 'secondary'):
-            st.session_state.sel_div = None if is_sel else div
-            st.rerun()
+_th  = f"padding:.55rem 1rem;text-align:left;font-size:.63rem;font-weight:700;color:{MUTED_FG};letter-spacing:.07em;text-transform:uppercase;white-space:nowrap"
+_thc = _th.replace("text-align:left","text-align:center")
+st.markdown(f"""
+<div style="background:{CARD};border:1px solid {BORDER};border-radius:{RADIUS};overflow:hidden;margin-bottom:1.5rem">
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr style="background:{MUTED};border-bottom:2px solid {BORDER}">
+        <th style="{_th}">부문</th>
+        <th style="{_th}">평균 달성률</th>
+        <th style="{_thc}">🟢 정상</th>
+        <th style="{_thc}">🟡 주의</th>
+        <th style="{_thc}">🔴 차질</th>
+        <th style="{_thc}">전체</th>
+        <th style="{_thc}">⭐ 핵심</th>
+        <th style="{_thc}">현황</th>
+      </tr>
+    </thead>
+    <tbody>{_div_rows_html}
+    </tbody>
+  </table>
+</div>""", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════
 # ③ DETAIL TABLE
@@ -780,11 +791,10 @@ hd_txt = 'KPI 상세' + (' — ⭐ 핵심 KPI' if key_only else '')
 st.markdown(f'<div class="sec-hd">{hd_txt}</div>', unsafe_allow_html=True)
 
 det = fdf.copy()
-if st.session_state.sel_div and '부문' in det.columns:
-    det = det[det['부문']==st.session_state.sel_div]
 
 dk2 = int((det['차별화'].astype(str).str.upper()=='Y').sum()) if '차별화' in det.columns else 0
-st.caption(f"{'📌 '+st.session_state.sel_div+' · ' if st.session_state.sel_div else ''}전체 {len(det)}건 · ⭐ 핵심 {dk2}건 · 일반 {len(det)-dk2}건")
+_div_label = f"📌 {sel_div} · " if sel_div != '전체' else ''
+st.caption(f"{_div_label}전체 {len(det)}건 · ⭐ 핵심 {dk2}건 · 일반 {len(det)-dk2}건")
 
 sc1, sc2 = st.columns([4,1])
 with sc1:
