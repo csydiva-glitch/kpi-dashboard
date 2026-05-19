@@ -308,21 +308,8 @@ _fb_ready = fb.is_firebase_available()
 
 if _fb_ready and not st.session_state.logged_in:
     st.markdown(f"""<style>
-    .login-wrap {{
-      display:flex; align-items:center; justify-content:center;
-      min-height:80vh; padding:2rem;
-    }}
-    .login-card {{
-      background:{CARD}; border:1px solid {BORDER}; border-radius:{RADIUS};
-      padding:2.5rem 2rem; width:100%; max-width:380px;
-      box-shadow:0 4px 12px rgba(0,0,0,0.08);
-    }}
-    .login-card [data-testid="stForm"] {{
-      border:none !important; padding:0 !important;
-    }}
-    </style>
-    <div class="login-wrap"><div class="login-card" id="login-card-anchor"></div></div>
-    """, unsafe_allow_html=True)
+    [data-testid="stForm"] {{ border:none !important; padding:0 !important; }}
+    </style>""", unsafe_allow_html=True)
 
     _, col, _ = st.columns([1, 1.4, 1])
     with col:
