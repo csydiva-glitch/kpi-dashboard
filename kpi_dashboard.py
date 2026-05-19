@@ -713,14 +713,14 @@ st.markdown(f"""
     <div class="kc-ico">🟢</div>
     <div class="kc-lbl">정상 달성</div>
     <div class="kc-val" style="color:#16A34A">{cnt['green']}<span style="font-size:1rem;font-weight:400;color:oklch(0.708 0 0)">건</span></div>
-    <div class="kc-sub">{cnt['green']/tot*100:.0f}% of {tot}건</div>
+    <div class="kc-sub">{cnt['green']/tot*100 if tot else 0:.0f}% of {tot}건</div>
   </div>
 
   <div class="kc kc-red">
     <div class="kc-ico">🔴</div>
     <div class="kc-lbl">차질 KPI</div>
     <div class="kc-val" style="color:#DC2626">{cnt['red']}<span style="font-size:1rem;font-weight:400;color:oklch(0.708 0 0)">건</span></div>
-    <div class="kc-sub">{cnt['red']/tot*100:.0f}% of {tot}건 · 즉시 점검 필요</div>
+    <div class="kc-sub">{cnt['red']/tot*100 if tot else 0:.0f}% of {tot}건 · 즉시 점검 필요</div>
   </div>
 
   <div class="kc kc-yellow">
